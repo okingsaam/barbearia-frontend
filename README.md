@@ -13,13 +13,15 @@ A experiência visual foi refinada com estética black + gold, animações sutis
 
 ## Demonstração
 
-Prévia visual atual do projeto:
+A mídia de demonstração ainda não foi adicionada ao repositório.
 
-![Prévia do King of Cut](src/assets/hero.png)
+Para exibir o GIF no README, adicione o arquivo em `public/demo.gif`.
 
-Estrutura pronta para GIF de demonstração (assim que o arquivo existir no repositório):
+Exemplo de bloco para usar após adicionar o arquivo:
 
-![Demonstração em GIF](public/demo.gif)
+```md
+![Demonstração King of Cut](public/demo.gif)
+```
 
 ## Stack
 

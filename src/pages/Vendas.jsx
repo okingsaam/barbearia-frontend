@@ -1,51 +1,89 @@
-import { useEffect, useState } from "react";
-import AppButton from "../components/AppButton";
-import DataTable from "../components/DataTable";
-import FormCard from "../components/FormCard";
-import { createCrudService, getEntityId } from "../services/api";
-import {
-  asList,
-  formatCurrency,
-  formatDateTime,
-  resolveNameById,
-} from "../services/uiHelpers";
+import { useEffect, useMemo, useState } from "react";
+import Button from "../components/Button";
+import Input from "../components/Input";
+import Modal from "../components/Modal";
+import Table from "../components/Table";
+import { createEntityService, getEntityId } from "../services/api";
 
-const vendasApi = createCrudService("/vendas");
-const clientesApi = createCrudService("/clientes");
-const produtosApi = createCrudService("/produtos");
+const vendasService = createEntityService("/vendas");
+const clientesService = createEntityService("/clientes");
+const produtosService = createEntityService("/produtos");
 
 const initialForm = {
   clienteId: "",
   produtoId: "",
   quantidade: "1",
-  total: 0,
 };
 
 function Vendas() {
-  const [vendas, setVendas] = useState([]);
+  const [rows, setRows] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [formData, setFormData] = useState(initialForm);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [feedback, setFeedback] = useState({ type: "", message: "" });
+
+  const clientNameMap = useMemo(
+    () => new Map(clientes.map((item) => [String(getEntityId(item)), item.nome])),
+    [clientes],
+  );
+  const productMap = useMemo(
+    () => new Map(produtos.map((item) => [String(getEntityId(item)), item])),
+    [produtos],
+  );
+
+  // Total preview recalcula sempre que produto ou quantidade mudam no formulario.
+  const selectedProduct = productMap.get(String(formData.produtoId));
+  const totalPreview = (Number(selectedProduct?.preco) || 0) * (Number(formData.quantidade) || 0);
+
+  const columns = [
+    {
+      key: "cliente",
+      label: "Cliente",
+      render: (row) => {
+        const key = String(row.clienteId ?? row.cliente?.id ?? row.cliente);
+        return row.cliente?.nome ?? clientNameMap.get(key) ?? "-";
+      },
+    },
+    {
+      key: "produto",
+      label: "Produto",
+      render: (row) => {
+        const key = String(row.produtoId ?? row.produto?.id ?? row.produto);
+        return row.produto?.nome ?? productMap.get(key)?.nome ?? "-";
+      },
+    },
+    { key: "quantidade", label: "Quantidade" },
+    {
+      key: "total",
+      label: "Total",
+      render: (row) =>
+        new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(Number(row.total) || 0),
+    },
+  ];
 
   async function loadPageData() {
     try {
-      setErrorMessage("");
-      const [vendasData, clientesData, produtosData] = await Promise.all([
-        vendasApi.list(),
-        clientesApi.list(),
-        produtosApi.list(),
+      setLoading(true);
+      // Vendas depende de clientes e produtos para exibir nomes na tabela.
+      const [vendas, clients, products] = await Promise.all([
+        vendasService.list(),
+        clientesService.list(),
+        produtosService.list(),
       ]);
 
-      setVendas(asList(vendasData));
-      setClientes(asList(clientesData));
-      setProdutos(asList(produtosData));
+      setRows(vendas);
+      setClientes(clients);
+      setProdutos(products);
     } catch (error) {
-      setErrorMessage(error.message);
+      setFeedback({ type: "error", message: error.message });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }
 
@@ -53,173 +91,93 @@ function Vendas() {
     loadPageData();
   }, []);
 
-  useEffect(() => {
-    const selectedProduct = produtos.find(
-      (produto) => String(getEntityId(produto)) === String(formData.produtoId),
-    );
-
-    const quantity = Number(formData.quantidade) || 0;
-    const calculatedTotal = Number(((selectedProduct?.preco ?? 0) * quantity).toFixed(2));
-
-    setFormData((previous) => {
-      if (previous.total === calculatedTotal) {
-        return previous;
-      }
-
-      return {
-        ...previous,
-        total: calculatedTotal,
-      };
-    });
-  }, [formData.produtoId, formData.quantidade, produtos]);
-
   function handleInputChange(event) {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: value }));
   }
 
-  function validateForm() {
-    if (!formData.clienteId) {
-      return "Selecione um cliente.";
-    }
-
-    if (!formData.produtoId) {
-      return "Selecione um produto.";
-    }
-
-    if (Number(formData.quantidade) <= 0) {
-      return "Quantidade deve ser maior que zero.";
-    }
-
-    return "";
+  function closeModal() {
+    setIsModalOpen(false);
+    setFormData(initialForm);
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const validationMessage = validateForm();
-    if (validationMessage) {
-      setErrorMessage(validationMessage);
-      return;
-    }
-
     try {
-      setIsSaving(true);
-      setErrorMessage("");
-
-      const payload = {
+      setSaving(true);
+      await vendasService.create({
         clienteId: Number(formData.clienteId),
         produtoId: Number(formData.produtoId),
         quantidade: Number(formData.quantidade),
-        total: Number(formData.total),
-      };
+        total: Number(totalPreview.toFixed(2)),
+      });
 
-      await vendasApi.create(payload);
-      setFormData(initialForm);
+      setFeedback({ type: "success", message: "Venda registrada com sucesso." });
+      closeModal();
       await loadPageData();
     } catch (error) {
-      setErrorMessage(error.message);
+      setFeedback({ type: "error", message: error.message });
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   }
-
-  async function handleDelete(venda) {
-    const id = getEntityId(venda);
-
-    if (!id) {
-      setErrorMessage("Nao foi possivel identificar a venda para exclusao.");
-      return;
-    }
-
-    if (!window.confirm("Deseja remover esta venda?")) {
-      return;
-    }
-
-    try {
-      setErrorMessage("");
-      await vendasApi.remove(id);
-      await loadPageData();
-    } catch (error) {
-      setErrorMessage(error.message);
-    }
-  }
-
-  const columns = [
-    { key: "id", label: "ID", render: (venda) => getEntityId(venda) ?? "-" },
-    {
-      key: "cliente",
-      label: "Cliente",
-      render: (venda) => resolveNameById(clientes, venda.cliente ?? venda.clienteId),
-    },
-    {
-      key: "produto",
-      label: "Produto",
-      render: (venda) => resolveNameById(produtos, venda.produto ?? venda.produtoId),
-    },
-    { key: "quantidade", label: "Qtd." },
-    {
-      key: "total",
-      label: "Total",
-      render: (venda) => formatCurrency(venda.total),
-    },
-    {
-      key: "data",
-      label: "Data",
-      render: (venda) => formatDateTime(venda.dataVenda ?? venda.createdAt ?? venda.data),
-    },
-  ];
 
   return (
-    <section className="page-section">
-      <header className="page-header">
-        <h2>Vendas</h2>
-        <p>Registre vendas de produtos com calculo automatico do total.</p>
-      </header>
+    <section className="page-card">
+      <div className="page-headline">
+        <div>
+          <h2>Vendas</h2>
+          <p className="page-subtitle">Registro de vendas e valor total calculado.</p>
+        </div>
+        <Button onClick={() => setIsModalOpen(true)}>+ Registrar</Button>
+      </div>
 
-      <FormCard
-        title="Registrar venda"
-        onSubmit={handleSubmit}
-        submitLabel="Salvar venda"
-        isSaving={isSaving}
-      >
-        <label>
-          Cliente
-          <select
+      {feedback.message ? (
+        <p className={`feedback feedback-${feedback.type}`}>{feedback.message}</p>
+      ) : null}
+
+      <Table columns={columns} rows={rows} loading={loading} />
+
+      <Modal isOpen={isModalOpen} title="Registrar venda" onClose={closeModal}>
+        <form className="koc-form-grid" onSubmit={handleSubmit}>
+          <Input
+            as="select"
+            label="Cliente"
             name="clienteId"
             value={formData.clienteId}
             onChange={handleInputChange}
+            options={[
+              { value: "", label: "Selecione" },
+              ...clientes.map((item) => ({
+                value: String(getEntityId(item)),
+                label: item.nome,
+              })),
+            ]}
             required
-          >
-            <option value="">Selecione um cliente</option>
-            {clientes.map((cliente) => (
-              <option key={getEntityId(cliente)} value={getEntityId(cliente)}>
-                {cliente.nome}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
 
-        <label>
-          Produto
-          <select
+          <Input
+            as="select"
+            label="Produto"
             name="produtoId"
             value={formData.produtoId}
             onChange={handleInputChange}
+            options={[
+              { value: "", label: "Selecione" },
+              ...produtos.map((item) => ({
+                value: String(getEntityId(item)),
+                label: `${item.nome} - ${new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(Number(item.preco) || 0)}`,
+              })),
+            ]}
             required
-          >
-            <option value="">Selecione um produto</option>
-            {produtos.map((produto) => (
-              <option key={getEntityId(produto)} value={getEntityId(produto)}>
-                {produto.nome}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
 
-        <label>
-          Quantidade
-          <input
+          <Input
+            label="Quantidade"
             name="quantidade"
             type="number"
             min="1"
@@ -227,35 +185,28 @@ function Vendas() {
             onChange={handleInputChange}
             required
           />
-        </label>
 
-        <label>
-          Total calculado
-          <input value={formatCurrency(formData.total)} readOnly />
-        </label>
-      </FormCard>
+          <Input
+            label="Total"
+            name="totalPreview"
+            value={new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            }).format(totalPreview || 0)}
+            readOnly
+            hint="Calculado automaticamente com base no produto e quantidade."
+          />
 
-      {errorMessage ? <p className="feedback feedback-error">{errorMessage}</p> : null}
-
-      <div className="panel">
-        <div className="panel-header">
-          <h3>Lista de vendas</h3>
-          {isLoading ? <span className="status-chip">Carregando...</span> : null}
-        </div>
-
-        <DataTable
-          columns={columns}
-          rows={vendas}
-          emptyMessage="Nenhuma venda cadastrada ate o momento."
-          renderActions={(venda) => (
-            <div className="row-actions">
-              <AppButton variant="danger" onClick={() => handleDelete(venda)}>
-                Excluir
-              </AppButton>
-            </div>
-          )}
-        />
-      </div>
+          <div className="koc-form-actions">
+            <Button type="button" variant="ghost" onClick={closeModal}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="secondary" disabled={saving}>
+              {saving ? "Salvando..." : "Salvar venda"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 }

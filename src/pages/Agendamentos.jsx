@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import AppButton from "../components/AppButton";
-import DataTable from "../components/DataTable";
-import FormCard from "../components/FormCard";
-import { createCrudService, getEntityId } from "../services/api";
-import { asList, formatDateTime, resolveNameById } from "../services/uiHelpers";
+import { useEffect, useMemo, useState } from "react";
+import Button from "../components/Button";
+import Input from "../components/Input";
+import Modal from "../components/Modal";
+import Table from "../components/Table";
+import { createEntityService, getEntityId } from "../services/api";
 
-const agendamentosApi = createCrudService("/agendamentos");
-const clientesApi = createCrudService("/clientes");
-const barbeirosApi = createCrudService("/barbeiros");
-const servicosApi = createCrudService("/servicos");
+const agendamentosService = createEntityService("/agendamentos");
+const clientesService = createEntityService("/clientes");
+const barbeirosService = createEntityService("/barbeiros");
+const servicosService = createEntityService("/servicos");
 
 const initialForm = {
   clienteId: "",
@@ -18,36 +18,91 @@ const initialForm = {
 };
 
 function Agendamentos() {
-  const [agendamentos, setAgendamentos] = useState([]);
+  const [rows, setRows] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [barbeiros, setBarbeiros] = useState([]);
   const [servicos, setServicos] = useState([]);
   const [formData, setFormData] = useState(initialForm);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [feedback, setFeedback] = useState({ type: "", message: "" });
+
+  // Mapas aceleram a resolucao de nomes quando a tabela recebe apenas IDs.
+  const clientNameMap = useMemo(
+    () => new Map(clientes.map((item) => [String(getEntityId(item)), item.nome])),
+    [clientes],
+  );
+  const barberNameMap = useMemo(
+    () => new Map(barbeiros.map((item) => [String(getEntityId(item)), item.nome])),
+    [barbeiros],
+  );
+  const serviceNameMap = useMemo(
+    () => new Map(servicos.map((item) => [String(getEntityId(item)), item.nome])),
+    [servicos],
+  );
+
+  const columns = [
+    {
+      key: "cliente",
+      label: "Cliente",
+      render: (row) => {
+        const key = String(row.clienteId ?? row.cliente?.id ?? row.cliente);
+        return row.cliente?.nome ?? clientNameMap.get(key) ?? "-";
+      },
+    },
+    {
+      key: "barbeiro",
+      label: "Barbeiro",
+      render: (row) => {
+        const key = String(row.barbeiroId ?? row.barbeiro?.id ?? row.barbeiro);
+        return row.barbeiro?.nome ?? barberNameMap.get(key) ?? "-";
+      },
+    },
+    {
+      key: "servico",
+      label: "Servico",
+      render: (row) => {
+        const key = String(row.servicoId ?? row.servico?.id ?? row.servico);
+        return row.servico?.nome ?? serviceNameMap.get(key) ?? "-";
+      },
+    },
+    {
+      key: "dataHora",
+      label: "Data/Hora",
+      render: (row) => {
+        const source = row.dataHora ?? row.data;
+        if (!source) {
+          return "-";
+        }
+
+        const parsedDate = new Date(source);
+        return Number.isNaN(parsedDate.getTime())
+          ? source
+          : parsedDate.toLocaleString("pt-BR");
+      },
+    },
+  ];
 
   async function loadPageData() {
     try {
-      setErrorMessage("");
+      setLoading(true);
+      // Carrega tudo em paralelo para evitar espera sequencial entre endpoints.
+      const [agendamentos, clients, barbers, services] = await Promise.all([
+        agendamentosService.list(),
+        clientesService.list(),
+        barbeirosService.list(),
+        servicosService.list(),
+      ]);
 
-      // Busca todas as entidades relacionadas para popular os selects.
-      const [agendamentosData, clientesData, barbeirosData, servicosData] =
-        await Promise.all([
-          agendamentosApi.list(),
-          clientesApi.list(),
-          barbeirosApi.list(),
-          servicosApi.list(),
-        ]);
-
-      setAgendamentos(asList(agendamentosData));
-      setClientes(asList(clientesData));
-      setBarbeiros(asList(barbeirosData));
-      setServicos(asList(servicosData));
+      setRows(agendamentos);
+      setClientes(clients);
+      setBarbeiros(barbers);
+      setServicos(services);
     } catch (error) {
-      setErrorMessage(error.message);
+      setFeedback({ type: "error", message: error.message });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }
 
@@ -60,204 +115,118 @@ function Agendamentos() {
     setFormData((previous) => ({ ...previous, [name]: value }));
   }
 
-  function validateForm() {
-    if (!formData.clienteId) {
-      return "Selecione um cliente.";
-    }
-
-    if (!formData.barbeiroId) {
-      return "Selecione um barbeiro.";
-    }
-
-    if (!formData.servicoId) {
-      return "Selecione um servico.";
-    }
-
-    if (!formData.dataHora) {
-      return "Selecione data e horario do agendamento.";
-    }
-
-    return "";
+  function closeModal() {
+    setIsModalOpen(false);
+    setFormData(initialForm);
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const validationMessage = validateForm();
-    if (validationMessage) {
-      setErrorMessage(validationMessage);
-      return;
-    }
-
     try {
-      setIsSaving(true);
-      setErrorMessage("");
-
-      const payload = {
+      setSaving(true);
+      await agendamentosService.create({
         clienteId: Number(formData.clienteId),
         barbeiroId: Number(formData.barbeiroId),
         servicoId: Number(formData.servicoId),
         dataHora: formData.dataHora,
-      };
+      });
 
-      await agendamentosApi.create(payload);
-      setFormData(initialForm);
+      setFeedback({ type: "success", message: "Agendamento criado com sucesso." });
+      closeModal();
       await loadPageData();
     } catch (error) {
-      setErrorMessage(error.message);
+      setFeedback({ type: "error", message: error.message });
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   }
-
-  async function handleDelete(agendamento) {
-    const id = getEntityId(agendamento);
-    if (!id) {
-      setErrorMessage("Nao foi possivel identificar o agendamento para exclusao.");
-      return;
-    }
-
-    if (!window.confirm("Deseja cancelar este agendamento?")) {
-      return;
-    }
-
-    try {
-      setErrorMessage("");
-      await agendamentosApi.remove(id);
-      await loadPageData();
-    } catch (error) {
-      setErrorMessage(error.message);
-    }
-  }
-
-  const columns = [
-    {
-      key: "id",
-      label: "ID",
-      render: (agendamento) => getEntityId(agendamento) ?? "-",
-    },
-    {
-      key: "cliente",
-      label: "Cliente",
-      render: (agendamento) =>
-        resolveNameById(clientes, agendamento.cliente ?? agendamento.clienteId),
-    },
-    {
-      key: "barbeiro",
-      label: "Barbeiro",
-      render: (agendamento) =>
-        resolveNameById(barbeiros, agendamento.barbeiro ?? agendamento.barbeiroId),
-    },
-    {
-      key: "servico",
-      label: "Servico",
-      render: (agendamento) =>
-        resolveNameById(servicos, agendamento.servico ?? agendamento.servicoId),
-    },
-    {
-      key: "dataHora",
-      label: "Data e horario",
-      render: (agendamento) => formatDateTime(agendamento.dataHora),
-    },
-  ];
 
   return (
-    <section className="page-section">
-      <header className="page-header">
-        <h2>Agendamentos</h2>
-        <p>Registre e acompanhe os horarios dos clientes com cada barbeiro.</p>
-      </header>
+    <section className="page-card">
+      <div className="page-headline">
+        <div>
+          <h2>Agendamentos</h2>
+          <p className="page-subtitle">Agenda de atendimentos da semana.</p>
+        </div>
+        <Button onClick={() => setIsModalOpen(true)}>+ Criar</Button>
+      </div>
 
-      <FormCard
-        title="Novo agendamento"
-        onSubmit={handleSubmit}
-        submitLabel="Criar agendamento"
-        isSaving={isSaving}
-      >
-        <label>
-          Cliente
-          <select
+      {feedback.message ? (
+        <p className={`feedback feedback-${feedback.type}`}>{feedback.message}</p>
+      ) : null}
+
+      <Table columns={columns} rows={rows} loading={loading} />
+
+      <Modal isOpen={isModalOpen} title="Criar agendamento" onClose={closeModal}>
+        <form className="koc-form-grid" onSubmit={handleSubmit}>
+          <Input
+            as="select"
+            label="Cliente"
             name="clienteId"
             value={formData.clienteId}
             onChange={handleInputChange}
+            options={[
+              { value: "", label: "Selecione" },
+              ...clientes.map((item) => ({
+                value: String(getEntityId(item)),
+                label: item.nome,
+              })),
+            ]}
             required
-          >
-            <option value="">Selecione um cliente</option>
-            {clientes.map((cliente) => (
-              <option key={getEntityId(cliente)} value={getEntityId(cliente)}>
-                {cliente.nome}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
 
-        <label>
-          Barbeiro
-          <select
+          <Input
+            as="select"
+            label="Barbeiro"
             name="barbeiroId"
             value={formData.barbeiroId}
             onChange={handleInputChange}
+            options={[
+              { value: "", label: "Selecione" },
+              ...barbeiros.map((item) => ({
+                value: String(getEntityId(item)),
+                label: item.nome,
+              })),
+            ]}
             required
-          >
-            <option value="">Selecione um barbeiro</option>
-            {barbeiros.map((barbeiro) => (
-              <option key={getEntityId(barbeiro)} value={getEntityId(barbeiro)}>
-                {barbeiro.nome}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
 
-        <label>
-          Servico
-          <select
+          <Input
+            as="select"
+            label="Servico"
             name="servicoId"
             value={formData.servicoId}
             onChange={handleInputChange}
+            options={[
+              { value: "", label: "Selecione" },
+              ...servicos.map((item) => ({
+                value: String(getEntityId(item)),
+                label: item.nome,
+              })),
+            ]}
             required
-          >
-            <option value="">Selecione um servico</option>
-            {servicos.map((servico) => (
-              <option key={getEntityId(servico)} value={getEntityId(servico)}>
-                {servico.nome}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
 
-        <label>
-          Data e horario
-          <input
+          <Input
+            label="Data e hora"
             name="dataHora"
             type="datetime-local"
             value={formData.dataHora}
             onChange={handleInputChange}
             required
           />
-        </label>
-      </FormCard>
 
-      {errorMessage ? <p className="feedback feedback-error">{errorMessage}</p> : null}
-
-      <div className="panel">
-        <div className="panel-header">
-          <h3>Lista de agendamentos</h3>
-          {isLoading ? <span className="status-chip">Carregando...</span> : null}
-        </div>
-
-        <DataTable
-          columns={columns}
-          rows={agendamentos}
-          emptyMessage="Nenhum agendamento cadastrado ate o momento."
-          renderActions={(agendamento) => (
-            <div className="row-actions">
-              <AppButton variant="danger" onClick={() => handleDelete(agendamento)}>
-                Cancelar
-              </AppButton>
-            </div>
-          )}
-        />
-      </div>
+          <div className="koc-form-actions">
+            <Button type="button" variant="ghost" onClick={closeModal}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="secondary" disabled={saving}>
+              {saving ? "Salvando..." : "Salvar agendamento"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 }

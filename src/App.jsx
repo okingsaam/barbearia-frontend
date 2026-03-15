@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import Footer from "./components/Footer";
+import Header from "./components/Header";
 import Navbar from "./components/Navbar";
 import Agendamentos from "./pages/Agendamentos";
 import Barbeiros from "./pages/Barbeiros";
@@ -9,10 +11,12 @@ import Vendas from "./pages/Vendas";
 
 function App() {
   return (
-    <div className="app-shell">
+    <div className="koc-app-shell">
       <Navbar />
 
-      <main className="app-main">
+      <main className="koc-main">
+        <Header />
+
         <Routes>
           <Route path="/" element={<Navigate to="/clientes" replace />} />
           <Route path="/clientes" element={<Clientes />} />
@@ -25,9 +29,7 @@ function App() {
         </Routes>
       </main>
 
-      <footer className="app-footer">
-        <p>Barbearia Pro • Painel de gestao • 2026</p>
-      </footer>
+      <Footer />
     </div>
   );
 }

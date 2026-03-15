@@ -1,11 +1,11 @@
 import axios from "axios";
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: "http://localhost:8080",
   timeout: 10000,
 });
 
-function getApiErrorMessage(error) {
+export function getApiErrorMessage(error) {
   if (error.response?.data) {
     const payload = error.response.data;
 
@@ -32,14 +32,22 @@ api.interceptors.response.use(
   (error) => Promise.reject(new Error(getApiErrorMessage(error))),
 );
 
-export function createCrudService(resource) {
+export function createEntityService(resource) {
   return {
     async list() {
       const response = await api.get(resource);
-      return response.data;
+      return Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.content)
+          ? response.data.content
+          : [];
     },
     async create(payload) {
       const response = await api.post(resource, payload);
+      return response.data;
+    },
+    async getById(id) {
+      const response = await api.get(`${resource}/${id}`);
       return response.data;
     },
     async update(id, payload) {

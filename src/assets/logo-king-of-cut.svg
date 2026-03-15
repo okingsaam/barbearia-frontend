@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" fill="none">
+  <rect width="360" height="200" rx="24" fill="#222"/>
+  <circle cx="180" cy="94" r="58" fill="#111" stroke="#D4AF37" stroke-width="6"/>
+  <path d="M128 70h104l-8 30h-88l-8-30Z" fill="#D4AF37" stroke="#8A6A1A" stroke-width="4"/>
+  <circle cx="142" cy="64" r="5" fill="#F8E5A6"/>
+  <circle cx="180" cy="54" r="5" fill="#F8E5A6"/>
+  <circle cx="218" cy="64" r="5" fill="#F8E5A6"/>
+  <path d="M136 126 226 72" stroke="#D4AF37" stroke-width="7" stroke-linecap="round"/>
+  <path d="M226 126 136 72" stroke="#D4AF37" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="118" cy="132" r="10" stroke="#D4AF37" stroke-width="6"/>
+  <circle cx="242" cy="132" r="10" stroke="#D4AF37" stroke-width="6"/>
+  <path d="M90 166h180" stroke="#D4AF37" stroke-width="4"/>
+  <text x="180" y="186" text-anchor="middle" fill="#F4E8BD" font-family="Georgia, serif" font-size="20" font-weight="700">KING OF CUT</text>
+</svg>

@@ -13,15 +13,16 @@ A experiência visual foi refinada com estética black + gold, animações sutis
 
 ## Demonstração
 
-A mídia de demonstração ainda não foi adicionada ao repositório.
+GIF de navegação da landing page:
 
-Para exibir o GIF no README, adicione o arquivo em `public/demo.gif`.
+![Demonstração King of Cut](public/screenshots/demo.gif)
 
-Exemplo de bloco para usar após adicionar o arquivo:
+Capturas de tela:
 
-```md
-![Demonstração King of Cut](public/demo.gif)
-```
+![King of Cut - Hero e Serviços](public/screenshots/landing-1.jpeg)
+![King of Cut - Barbeiros e Preços](public/screenshots/landing-2.jpeg)
+![King of Cut - Cards de Preços](public/screenshots/landing-3.jpeg)
+![King of Cut - Agendamento e Rodapé](public/screenshots/landing-4.jpeg)
 
 ## Stack
 

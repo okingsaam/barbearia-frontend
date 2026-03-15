@@ -11,6 +11,16 @@ O projeto combina duas frentes no mesmo frontend:
 
 A experiência visual foi refinada com estética black + gold, animações sutis, tipografia premium e layout responsivo.
 
+## Demonstração
+
+Prévia visual atual do projeto:
+
+![Prévia do King of Cut](src/assets/hero.png)
+
+Estrutura pronta para GIF de demonstração (assim que o arquivo existir no repositório):
+
+![Demonstração em GIF](public/demo.gif)
+
 ## Stack
 
 - React

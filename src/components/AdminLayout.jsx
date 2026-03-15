@@ -1,0 +1,61 @@
+import { Link, NavLink, Outlet } from "react-router-dom";
+import crownIcon from "../assets/icon-crown.svg";
+import Header from "./Header";
+
+const ADMIN_ITEMS = [
+  { to: "/clientes",     label: "Clientes" },
+  { to: "/barbeiros",    label: "Barbeiros" },
+  { to: "/servicos",     label: "Serviços" },
+  { to: "/produtos",     label: "Produtos" },
+  { to: "/agendamentos", label: "Agenda" },
+  { to: "/vendas",       label: "Vendas" },
+];
+
+function AdminLayout() {
+  return (
+    <div className="koc-app-shell">
+      <nav className="koc-navbar" aria-label="Admin navigation">
+        <div className="koc-navbar-brand">
+          <img src={crownIcon} alt="King of Cut" />
+          <div>
+            <p>King of Cut</p>
+            <span>Admin Panel</span>
+          </div>
+        </div>
+
+        <ul className="koc-navbar-links">
+          {ADMIN_ITEMS.map((item) => (
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
+                className={({ isActive }) =>
+                  isActive ? "koc-nav-link koc-nav-link-active" : "koc-nav-link"
+                }
+              >
+                {item.label}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+
+        <Link to="/" className="koc-book-link">
+          ← Site
+        </Link>
+      </nav>
+
+      <main className="koc-main">
+        <Header />
+        <Outlet />
+      </main>
+
+      <footer className="koc-footer">
+        <p>
+          © {new Date().getFullYear()} King of Cut ·{" "}
+          <span style={{ color: "var(--koc-gold)" }}>Admin Panel</span>
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+export default AdminLayout;

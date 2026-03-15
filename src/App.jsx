@@ -1,36 +1,29 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import Footer from "./components/Footer";
-import Header from "./components/Header";
-import Navbar from "./components/Navbar";
+import AdminLayout from "./components/AdminLayout";
 import Agendamentos from "./pages/Agendamentos";
 import Barbeiros from "./pages/Barbeiros";
 import Clientes from "./pages/Clientes";
+import Home from "./pages/Home";
 import Produtos from "./pages/Produtos";
 import Servicos from "./pages/Servicos";
 import Vendas from "./pages/Vendas";
 
 function App() {
   return (
-    <div className="koc-app-shell">
-      <Navbar />
+    <Routes>
+      <Route path="/" element={<Home />} />
 
-      <main className="koc-main">
-        <Header />
+      <Route element={<AdminLayout />}>
+        <Route path="/clientes"     element={<Clientes />} />
+        <Route path="/barbeiros"    element={<Barbeiros />} />
+        <Route path="/servicos"     element={<Servicos />} />
+        <Route path="/produtos"     element={<Produtos />} />
+        <Route path="/agendamentos" element={<Agendamentos />} />
+        <Route path="/vendas"       element={<Vendas />} />
+      </Route>
 
-        <Routes>
-          <Route path="/" element={<Navigate to="/clientes" replace />} />
-          <Route path="/clientes" element={<Clientes />} />
-          <Route path="/barbeiros" element={<Barbeiros />} />
-          <Route path="/servicos" element={<Servicos />} />
-          <Route path="/produtos" element={<Produtos />} />
-          <Route path="/agendamentos" element={<Agendamentos />} />
-          <Route path="/vendas" element={<Vendas />} />
-          <Route path="*" element={<Navigate to="/clientes" replace />} />
-        </Routes>
-      </main>
-
-      <Footer />
-    </div>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 

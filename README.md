@@ -17,13 +17,6 @@ GIF de navegação da landing page:
 
 ![Demonstração King of Cut](public/screenshots/demo.gif)
 
-Capturas de tela:
-
-![King of Cut - Hero e Serviços](public/screenshots/landing-1.jpeg)
-![King of Cut - Barbeiros e Preços](public/screenshots/landing-2.jpeg)
-![King of Cut - Cards de Preços](public/screenshots/landing-3.jpeg)
-![King of Cut - Agendamento e Rodapé](public/screenshots/landing-4.jpeg)
-
 ## Stack
 
 - React

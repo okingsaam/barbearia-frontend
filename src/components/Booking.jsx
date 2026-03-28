@@ -84,7 +84,7 @@ function Booking() {
                 <div>
                   <div className="booking-info-label">Localização</div>
                   <div className="booking-info-value">
-                    Rua da Barbearia, 123<br />Centro — São Paulo, SP
+                    Av. Almirante Marques de Leão, 348<br />Barra — Salvador, BA
                   </div>
                 </div>
               </div>

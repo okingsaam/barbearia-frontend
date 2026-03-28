@@ -81,8 +81,8 @@ function Footer() {
                   className="l-footer-link"
                   style={{ cursor: "default", lineHeight: "1.6" }}
                 >
-                  Rua da Barbearia, 123<br />
-                  Centro — São Paulo, SP
+                  Av. Almirante Marques de Leão, 348<br />
+                  Barra — Salvador, BA
                 </span>
               </li>
               <li><span className="l-footer-link">(11) 99999-0000</span></li>

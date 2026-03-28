@@ -4,9 +4,9 @@ import Input from "../components/Input";
 import Modal from "../components/Modal";
 import Table from "../components/Table";
 import { createEntityService, getEntityId } from "../services/api";
+import clienteService from "../services/clienteService";
 
 const vendasService = createEntityService("/vendas");
-const clientesService = createEntityService("/clientes");
 const produtosService = createEntityService("/produtos");
 
 const initialForm = {
@@ -73,7 +73,7 @@ function Vendas() {
       // Vendas depende de clientes e produtos para exibir nomes na tabela.
       const [vendas, clients, products] = await Promise.all([
         vendasService.list(),
-        clientesService.list(),
+        clienteService.list(),
         produtosService.list(),
       ]);
 

@@ -4,9 +4,9 @@ import Input from "../components/Input";
 import Modal from "../components/Modal";
 import Table from "../components/Table";
 import { createEntityService, getEntityId } from "../services/api";
+import clienteService from "../services/clienteService";
 
 const agendamentosService = createEntityService("/agendamentos");
-const clientesService = createEntityService("/clientes");
 const barbeirosService = createEntityService("/barbeiros");
 const servicosService = createEntityService("/servicos");
 
@@ -90,7 +90,7 @@ function Agendamentos() {
       // Carrega tudo em paralelo para evitar espera sequencial entre endpoints.
       const [agendamentos, clients, barbers, services] = await Promise.all([
         agendamentosService.list(),
-        clientesService.list(),
+        clienteService.list(),
         barbeirosService.list(),
         servicosService.list(),
       ]);

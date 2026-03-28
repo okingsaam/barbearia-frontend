@@ -260,6 +260,77 @@ p {
   height: 30px;
 }
 
+.api-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  opacity: 0;
+  background: linear-gradient(90deg, #c39a2a 0%, #f2d17a 55%, #b68822 100%);
+  z-index: 9999;
+  transition: opacity 160ms ease;
+}
+
+.api-loading-bar-visible {
+  opacity: 1;
+  animation: api-loading-pulse 900ms ease-in-out infinite;
+}
+
+.api-feedback-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  max-width: min(420px, calc(100% - 30px));
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(20, 20, 20, 0.92);
+  color: #f4f4f4;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.32);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.api-feedback-toast-error {
+  opacity: 1;
+  transform: translateY(0);
+  border-color: rgba(226, 80, 71, 0.45);
+}
+
+@keyframes api-loading-pulse {
+  0% {
+    transform: scaleX(0.18);
+    opacity: 0.78;
+  }
+
+  50% {
+    transform: scaleX(0.64);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleX(1);
+    opacity: 0.85;
+  }
+}
+
+@media (max-width: 720px) {
+  .api-feedback-toast {
+    right: 14px;
+    left: 14px;
+    bottom: 14px;
+    max-width: none;
+  }
+}
+
 .koc-hero-card h3 {
   font-family: "Cinzel", serif;
   font-size: 0.98rem;

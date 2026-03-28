@@ -52,7 +52,8 @@ function Booking() {
           "Agendamento realizado com sucesso! Confirmaremos via WhatsApp em breve.",
       });
       setForm(INITIAL_FORM);
-    } catch {
+    } catch (error) {
+      console.error("[Booking] Falha ao criar agendamento:", error.message);
       setFeedback({
         type: "error",
         message:

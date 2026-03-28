@@ -62,7 +62,11 @@ GIF de navegação da landing page:
 
 O frontend está configurado para consumir a API em:
 
-- `http://localhost:8080`
+- `https://diligent-transformation-production-4c42.up.railway.app`
+
+Voce tambem pode sobrescrever via variavel de ambiente:
+
+- `VITE_API_BASE_URL`
 
 Os endpoints preparados no projeto incluem:
 
@@ -72,6 +76,33 @@ Os endpoints preparados no projeto incluem:
 - `/produtos`
 - `/agendamentos`
 - `/vendas`
+
+### Configuração Centralizada
+
+A integração HTTP foi centralizada em `src/services/api.js` com:
+
+- `API_BASE_URL` por ambiente (fallback para produção)
+- Instância única do Axios para todo o projeto
+- Interceptor de request para incluir `Authorization: Bearer <token>` quando existir token em `localStorage`
+- Interceptor de response para padronização de mensagens de erro
+
+### Organização de Serviços
+
+Além do serviço genérico de entidades, o projeto possui serviços dedicados para separar responsabilidades:
+
+- `src/services/authService.js` para autenticação e gerenciamento de token
+- `src/services/clienteService.js` para operações de clientes
+
+Esse padrão permite criar novos serviços específicos sem acoplamento às páginas.
+
+### Feedback Visual de Requisições
+
+O frontend possui feedback global para chamadas de API:
+
+- Barra de loading no topo durante requisições em andamento
+- Toast de erro com mensagem amigável em falhas de comunicação
+
+Componente responsável: `src/components/ApiRequestFeedback.jsx`.
 
 ## Como Rodar o Projeto
 

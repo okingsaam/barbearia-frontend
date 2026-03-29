@@ -19,7 +19,7 @@ function AdminLayout() {
           <img src={crownIcon} alt="King of Cut" />
           <div>
             <p>King of Cut</p>
-            <span>Admin Panel</span>
+            <span>Painel Admin</span>
           </div>
         </div>
 
@@ -39,7 +39,7 @@ function AdminLayout() {
         </ul>
 
         <Link to="/" className="koc-book-link">
-          ← Site
+          ← Voltar
         </Link>
       </nav>
 
@@ -51,7 +51,7 @@ function AdminLayout() {
       <footer className="koc-footer">
         <p>
           © {new Date().getFullYear()} King of Cut ·{" "}
-          <span style={{ color: "var(--koc-gold)" }}>Admin Panel</span>
+          <span style={{ color: "var(--koc-gold)" }}>Painel Admin</span>
         </p>
       </footer>
     </div>

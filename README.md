@@ -157,6 +157,48 @@ src/
 - Scroll reveal em elementos da landing page
 - Hero mais compacto e profissional
 
+## Deploy no Railway
+
+O projeto está configurado para deploy automático no Railway com o arquivo `railway.json`.
+
+### Pré-requisitos
+
+1. Conta no Railway ([railway.app](https://railway.app))
+2. Repositório GitHub conectado
+3. Variável de ambiente configurada no Railway:
+	- `VITE_API_BASE_URL`: URL da API em produção
+
+### Passos para Deploy
+
+1. **Conectar Repositório**
+	- Acesse o painel do Railway
+	- Clique em "New Project" → "GitHub Repo"
+	- Selecione o repositório `barbearia-frontend`
+
+2. **Configurar Variáveis de Ambiente**
+	- No painel do projeto Railway
+	- Vá em "Variables"
+	- Adicione: `VITE_API_BASE_URL=https://sua-api.railway.app`
+
+3. **Deploy Automático**
+	- Railway detectará o `railway.json` automaticamente
+	- Build será executado com `npm run build`
+	- Serviço iniciará com `npm run preview -- --host 0.0.0.0 --port $PORT`
+
+### Arquivo Local
+
+O arquivo `.env.local` é ignorado pelo git. Configure localmente com:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+Para usar a API de produção no desenvolvimento:
+
+```bash
+VITE_API_BASE_URL=https://sua-api.railway.app
+```
+
 ## Status
 
-Projeto funcional, com build validado e pronto para evolução visual e integração com backend real.
+Projeto funcional, com build validado e pronto para deploy no Railway com configuração automática via railway.json.

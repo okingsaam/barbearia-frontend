@@ -12,6 +12,11 @@ const ADMIN_ITEMS = [
 ];
 
 function AdminLayout() {
+  function handleLogout() {
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+  }
+
   return (
     <div className="koc-app-shell">
       <nav className="koc-navbar" aria-label="Admin navigation">
@@ -41,6 +46,10 @@ function AdminLayout() {
         <Link to="/" className="koc-book-link">
           ← Voltar
         </Link>
+
+        <button onClick={handleLogout} className="koc-book-link">
+          Sair
+        </button>
       </nav>
 
       <main className="koc-main">

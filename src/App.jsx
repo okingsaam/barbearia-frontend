@@ -1,10 +1,12 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import ApiRequestFeedback from "./components/ApiRequestFeedback";
 import Agendamentos from "./pages/Agendamentos";
 import Barbeiros from "./pages/Barbeiros";
 import Clientes from "./pages/Clientes";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 import Produtos from "./pages/Produtos";
 import Servicos from "./pages/Servicos";
 import Vendas from "./pages/Vendas";
@@ -16,8 +18,15 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
 
-        <Route element={<AdminLayout />}>
+        <Route
+          element={(
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          )}
+        >
           <Route path="/clientes"     element={<Clientes />} />
           <Route path="/barbeiros"    element={<Barbeiros />} />
           <Route path="/servicos"     element={<Servicos />} />

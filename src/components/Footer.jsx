@@ -77,16 +77,27 @@ function Footer() {
             <p className="l-footer-col-title">Contato</p>
             <ul className="l-footer-links" style={{ gap: "14px" }}>
               <li>
-                <span
+                <a
                   className="l-footer-link"
-                  style={{ cursor: "default", lineHeight: "1.6" }}
+                  href="https://www.google.com/maps/search/?api=1&query=Av.%20Almirante%20Marques%20de%20Le%C3%A3o%2C%20348%20Barra%20Salvador%20BA"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ lineHeight: "1.6" }}
                 >
                   Av. Almirante Marques de Leão, 348<br />
                   Barra — Salvador, BA
-                </span>
+                </a>
               </li>
-              <li><span className="l-footer-link">(11) 99999-0000</span></li>
-              <li><span className="l-footer-link">contato@kingofcut.com.br</span></li>
+              <li>
+                <a className="l-footer-link" href="tel:+5511999990000">
+                  (11) 99999-0000
+                </a>
+              </li>
+              <li>
+                <a className="l-footer-link" href="mailto:contato@kingofcut.com.br">
+                  contato@kingofcut.com.br
+                </a>
+              </li>
               <li>
                 <span
                   className="l-footer-link"

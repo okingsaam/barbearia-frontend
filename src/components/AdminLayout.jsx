@@ -1,6 +1,7 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import crownIcon from "../assets/icon-crown.svg";
 import Header from "./Header";
+import { clearAuthToken } from "../services/authService";
 
 const ADMIN_ITEMS = [
   { to: "/clientes",     label: "Clientes" },
@@ -12,9 +13,11 @@ const ADMIN_ITEMS = [
 ];
 
 function AdminLayout() {
+  const navigate = useNavigate();
+
   function handleLogout() {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
+    clearAuthToken();
+    navigate("/login", { replace: true });
   }
 
   return (
@@ -47,7 +50,7 @@ function AdminLayout() {
           ← Voltar
         </Link>
 
-        <button onClick={handleLogout} className="koc-book-link">
+        <button onClick={handleLogout} className="koc-book-link koc-book-link-button">
           Sair
         </button>
       </nav>

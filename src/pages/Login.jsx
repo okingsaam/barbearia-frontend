@@ -1,100 +1,80 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../services/api";
+import { Navigate, useNavigate } from "react-router-dom";
+import crownIcon from "../assets/icon-crown.svg";
+import Button from "../components/Button";
+import Input from "../components/Input";
+import { getAuthToken, login as authenticate } from "../services/authService";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  if (getAuthToken()) {
+    return <Navigate to="/clientes" replace />;
+  }
 
   async function handleLogin(e) {
     e.preventDefault();
     setErro("");
+    setLoading(true);
 
     try {
-      const response = await api.post("/auth/login", { email, senha });
-      localStorage.setItem("token", response.data.token);
+      await authenticate({ email, senha });
       navigate("/clientes");
-    } catch {
+    } catch (error) {
       setErro("Email ou senha incorretos.");
+      console.error("[Login] Falha na autenticação:", error.message);
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        height: "100vh",
-        background: "#111",
-      }}
-    >
-      <form
-        onSubmit={handleLogin}
-        style={{
-          background: "#1a1a1a",
-          padding: "2rem",
-          borderRadius: "8px",
-          minWidth: "320px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-        }}
-      >
-        <h2 style={{ color: "#c9a84c", textAlign: "center" }}>
-          Admin - King of Cut
-        </h2>
+    <main className="login-shell">
+      <section className="login-card" aria-label="Login administrativo">
+        <div className="login-mark">
+          <img src={crownIcon} alt="King of Cut" />
+        </div>
+        <div className="login-brand">
+          <span className="login-eyebrow">King of Cut</span>
+          <h1>Painel Admin</h1>
+          <p>
+            Entre com seu email e senha para acessar os módulos administrativos.
+          </p>
+        </div>
 
-        {erro && <p style={{ color: "red", textAlign: "center" }}>{erro}</p>}
+        <form className="login-form" onSubmit={handleLogin}>
+          {erro ? <p className="login-error">{erro}</p> : null}
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{
-            padding: "0.75rem",
-            borderRadius: "4px",
-            border: "1px solid #333",
-            background: "#222",
-            color: "#fff",
-          }}
-        />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="seu@email.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            required
+          />
 
-        <input
-          type="password"
-          placeholder="Senha"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          required
-          style={{
-            padding: "0.75rem",
-            borderRadius: "4px",
-            border: "1px solid #333",
-            background: "#222",
-            color: "#fff",
-          }}
-        />
+          <Input
+            label="Senha"
+            type="password"
+            placeholder="Sua senha"
+            value={senha}
+            onChange={(event) => setSenha(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
 
-        <button
-          type="submit"
-          style={{
-            padding: "0.75rem",
-            background: "#c9a84c",
-            color: "#111",
-            fontWeight: "bold",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-        >
-          Entrar
-        </button>
-      </form>
-    </div>
+          <Button type="submit" variant="secondary" fullWidth disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
+          </Button>
+        </form>
+      </section>
+    </main>
   );
 }
 

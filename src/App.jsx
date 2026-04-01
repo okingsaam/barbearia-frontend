@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
-import ProtectedRoute from "./components/ProtectedRoute";
+import PrivateRoute from "./components/PrivateRoute";
 import ApiRequestFeedback from "./components/ApiRequestFeedback";
 import Agendamentos from "./pages/Agendamentos";
 import Barbeiros from "./pages/Barbeiros";
@@ -22,9 +22,9 @@ function App() {
 
         <Route
           element={(
-            <ProtectedRoute>
+            <PrivateRoute>
               <AdminLayout />
-            </ProtectedRoute>
+            </PrivateRoute>
           )}
         >
           <Route path="/clientes"     element={<Clientes />} />

@@ -26,6 +26,9 @@ function Booking() {
   const [clientes, setClientes] = useState([]);
   const [barbeiros, setBarbeiros] = useState([]);
   const [servicos, setServicos] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
@@ -58,27 +61,75 @@ function Booking() {
     return `${data}T${horario}:00`;
   }
 
-  async function loadFormData() {
-    const [clientesResponse, barbeirosResponse, servicosResponse] = await Promise.all([
-      clientesService.list(),
-      barbeirosService.list(),
-      servicosService.list(),
-    ]);
+  function getTodayValue() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
 
-    setClientes(clientesResponse);
-    setBarbeiros(barbeirosResponse);
-    setServicos(servicosResponse);
+    return `${year}-${month}-${day}`;
+  }
+
+  function formatDateLabel(value) {
+    const [year, month, day] = String(value ?? "").split("-");
+
+    if (!year || !month || !day) {
+      return value;
+    }
+
+    return `${day}/${month}/${year}`;
   }
 
   useEffect(() => {
-    loadFormData().catch((error) => {
-      console.error("[Booking] Falha ao carregar cadastros:", error.message);
-      setFeedback({
-        type: "error",
-        message: "Nao foi possivel carregar os dados do agendamento.",
-      });
-    });
-  }, []);
+    let isActive = true;
+
+    async function loadFormData() {
+      try {
+        setFeedback(null);
+        setCatalogLoading(true);
+        setCatalogError("");
+
+        const [clientesResponse, barbeirosResponse, servicosResponse] = await Promise.all([
+          clientesService.list(),
+          barbeirosService.list(),
+          servicosService.list(),
+        ]);
+
+        if (!isActive) {
+          return;
+        }
+
+        setClientes(clientesResponse);
+        setBarbeiros(barbeirosResponse);
+        setServicos(servicosResponse);
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        console.error("[Booking] Falha ao carregar cadastros:", error.message);
+        setCatalogError("Nao foi possivel carregar barbeiros e servicos agora.");
+        setFeedback({
+          type: "error",
+          message: "Nao foi possivel carregar os barbeiros e servicos. Tente novamente.",
+        });
+      } finally {
+        if (isActive) {
+          setCatalogLoading(false);
+        }
+      }
+    }
+
+    loadFormData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [catalogReloadKey]);
+
+  function handleRetryLoad() {
+    setCatalogReloadKey((value) => value + 1);
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -90,6 +141,16 @@ function Booking() {
     setLoading(true);
     setFeedback(null);
     try {
+      const todayValue = getTodayValue();
+
+      if (!form.data) {
+        throw new Error("Selecione uma data para o agendamento.");
+      }
+
+      if (form.data < todayValue) {
+        throw new Error("Nao permitimos datas passadas. Escolha um dia a partir de hoje.");
+      }
+
       const telefoneNormalizado = normalizePhone(form.telefone);
       const clienteExistente = clienteByTelefone.get(telefoneNormalizado);
       const cliente =
@@ -126,8 +187,7 @@ function Booking() {
       });
       setFeedback({
         type: "success",
-        message:
-          "Agendamento realizado com sucesso! Confirmaremos via WhatsApp em breve.",
+        message: `Agendamento confirmado para ${formatDateLabel(form.data)} às ${form.horario}. Enviaremos a confirmação via WhatsApp.`,
       });
       setForm(INITIAL_FORM);
     } catch (error) {
@@ -210,6 +270,15 @@ function Booking() {
                 </div>
               )}
 
+              {catalogError ? (
+                <div className="booking-catalog-error">
+                  <span>{catalogError}</span>
+                  <button type="button" className="booking-retry-button" onClick={handleRetryLoad}>
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : null}
+
               <div className="booking-form-grid">
                 <div className="booking-form-group">
                   <label className="booking-form-label" htmlFor="bk-name">
@@ -245,42 +314,54 @@ function Booking() {
                   <label className="booking-form-label" htmlFor="bk-service">
                     Serviço
                   </label>
-                  <select
-                    id="bk-service"
-                    name="servico"
-                    className="booking-form-control"
-                    value={form.servico}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Selecione um serviço</option>
-                    {servicos.map((item) => (
-                      <option key={getEntityId(item) ?? item.nome} value={item.nome}>
-                        {item.nome}
+                  <div className="booking-select-shell">
+                    <select
+                      id="bk-service"
+                      name="servico"
+                      className="booking-form-control"
+                      value={form.servico}
+                      onChange={handleChange}
+                      disabled={catalogLoading || Boolean(catalogError)}
+                      required
+                    >
+                      <option value="">
+                        {catalogLoading ? "Carregando serviços..." : "Selecione um serviço"}
                       </option>
-                    ))}
-                  </select>
+                      {!catalogLoading && servicos.map((item) => (
+                        <option key={getEntityId(item) ?? item.nome} value={item.nome}>
+                          {item.nome}
+                        </option>
+                      ))}
+                    </select>
+                    {catalogLoading ? <span className="booking-select-spinner" aria-hidden="true" /> : null}
+                  </div>
                 </div>
 
                 <div className="booking-form-group">
                   <label className="booking-form-label" htmlFor="bk-barber">
                     Barbeiro
                   </label>
-                  <select
-                    id="bk-barber"
-                    name="barbeiro"
-                    className="booking-form-control"
-                    value={form.barbeiro}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Selecione um barbeiro</option>
-                    {barbeiros.map((item) => (
-                      <option key={getEntityId(item) ?? item.nome} value={item.nome}>
-                        {item.nome}
+                  <div className="booking-select-shell">
+                    <select
+                      id="bk-barber"
+                      name="barbeiro"
+                      className="booking-form-control"
+                      value={form.barbeiro}
+                      onChange={handleChange}
+                      disabled={catalogLoading || Boolean(catalogError)}
+                      required
+                    >
+                      <option value="">
+                        {catalogLoading ? "Carregando barbeiros..." : "Selecione um barbeiro"}
                       </option>
-                    ))}
-                  </select>
+                      {!catalogLoading && barbeiros.map((item) => (
+                        <option key={getEntityId(item) ?? item.nome} value={item.nome}>
+                          {item.nome}
+                        </option>
+                      ))}
+                    </select>
+                    {catalogLoading ? <span className="booking-select-spinner" aria-hidden="true" /> : null}
+                  </div>
                 </div>
 
                 <div className="booking-form-group">
@@ -294,7 +375,7 @@ function Booking() {
                     className="booking-form-control"
                     value={form.data}
                     onChange={handleChange}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={getTodayValue()}
                     required
                   />
                 </div>
@@ -322,7 +403,8 @@ function Booking() {
               <button
                 type="submit"
                 className="booking-submit-btn"
-                disabled={loading}
+                disabled={loading || catalogLoading || Boolean(catalogError)}
+                aria-busy={loading}
               >
                 {loading ? "AGENDANDO..." : "CONFIRMAR AGENDAMENTO"}
               </button>

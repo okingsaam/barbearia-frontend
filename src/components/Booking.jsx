@@ -1,25 +1,16 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import SectionDivider from "./SectionDivider";
-import { api } from "../services/api";
-
-const SERVICES = [
-  "Corte de Cabelo",
-  "Aparar Barba",
-  "Barba com Navalha",
-  "Corte + Barba",
-];
-
-const BARBERS = [
-  "Rafael Júnior",
-  "Marcos Costa",
-  "Lucas Ferreira",
-  "Qualquer Disponível",
-];
+import { createEntityService, getEntityId } from "../services/api";
 
 const TIMES = [
   "09:00", "10:00", "11:00", "12:00",
   "14:00", "15:00", "16:00", "17:00", "18:00",
 ];
+
+const clientesService = createEntityService("/clientes");
+const barbeirosService = createEntityService("/barbeiros");
+const servicosService = createEntityService("/servicos");
+const agendamentosService = createEntityService("/agendamentos");
 
 const INITIAL_FORM = {
   nomeCliente: "",
@@ -32,8 +23,62 @@ const INITIAL_FORM = {
 
 function Booking() {
   const [form, setForm] = useState(INITIAL_FORM);
+  const [clientes, setClientes] = useState([]);
+  const [barbeiros, setBarbeiros] = useState([]);
+  const [servicos, setServicos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+
+  const clienteByTelefone = useMemo(
+    () => new Map(clientes.map((item) => [normalizePhone(item.telefone), item])),
+    [clientes],
+  );
+  const barbeiroByNome = useMemo(
+    () => new Map(barbeiros.map((item) => [normalizeName(item.nome), item])),
+    [barbeiros],
+  );
+  const servicoByNome = useMemo(
+    () => new Map(servicos.map((item) => [normalizeName(item.nome), item])),
+    [servicos],
+  );
+
+  function normalizePhone(value) {
+    return String(value ?? "").replace(/\D/g, "");
+  }
+
+  function normalizeName(value) {
+    return String(value ?? "").trim().toLowerCase();
+  }
+
+  function buildDataHora(data, horario) {
+    if (!data || !horario) {
+      return "";
+    }
+
+    return `${data}T${horario}:00`;
+  }
+
+  async function loadFormData() {
+    const [clientesResponse, barbeirosResponse, servicosResponse] = await Promise.all([
+      clientesService.list(),
+      barbeirosService.list(),
+      servicosService.list(),
+    ]);
+
+    setClientes(clientesResponse);
+    setBarbeiros(barbeirosResponse);
+    setServicos(servicosResponse);
+  }
+
+  useEffect(() => {
+    loadFormData().catch((error) => {
+      console.error("[Booking] Falha ao carregar cadastros:", error.message);
+      setFeedback({
+        type: "error",
+        message: "Nao foi possivel carregar os dados do agendamento.",
+      });
+    });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,7 +90,40 @@ function Booking() {
     setLoading(true);
     setFeedback(null);
     try {
-      await api.post("/agendamentos", form);
+      const telefoneNormalizado = normalizePhone(form.telefone);
+      const clienteExistente = clienteByTelefone.get(telefoneNormalizado);
+      const cliente =
+        clienteExistente ??
+        (await clientesService.create({
+          nome: form.nomeCliente,
+          telefone: form.telefone,
+        }));
+      const barbeiro = barbeiroByNome.get(normalizeName(form.barbeiro));
+      const servico = servicoByNome.get(normalizeName(form.servico));
+      const dataHora = buildDataHora(form.data, form.horario);
+
+      if (!cliente || !getEntityId(cliente)) {
+        throw new Error("Nao foi possivel identificar o cliente.");
+      }
+
+      if (!barbeiro || !getEntityId(barbeiro)) {
+        throw new Error("Nao foi possivel identificar o barbeiro selecionado.");
+      }
+
+      if (!servico || !getEntityId(servico)) {
+        throw new Error("Nao foi possivel identificar o servico selecionado.");
+      }
+
+      if (!dataHora) {
+        throw new Error("Data e horario sao obrigatorios.");
+      }
+
+      await agendamentosService.create({
+        clienteId: Number(getEntityId(cliente)),
+        barbeiroId: Number(getEntityId(barbeiro)),
+        servicoId: Number(getEntityId(servico)),
+        dataHora,
+      });
       setFeedback({
         type: "success",
         message:
@@ -163,78 +241,82 @@ function Booking() {
                   />
                 </div>
 
-              <div className="booking-form-group">
-                <label className="booking-form-label" htmlFor="bk-service">
-                  Serviço
-                </label>
-                <select
-                  id="bk-service"
-                  name="servico"
-                  className="booking-form-control"
-                  value={form.servico}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Selecione um serviço</option>
-                  {SERVICES.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
+                <div className="booking-form-group">
+                  <label className="booking-form-label" htmlFor="bk-service">
+                    Serviço
+                  </label>
+                  <select
+                    id="bk-service"
+                    name="servico"
+                    className="booking-form-control"
+                    value={form.servico}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Selecione um serviço</option>
+                    {servicos.map((item) => (
+                      <option key={getEntityId(item) ?? item.nome} value={item.nome}>
+                        {item.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="booking-form-group">
-                <label className="booking-form-label" htmlFor="bk-barber">
-                  Barbeiro
-                </label>
-                <select
-                  id="bk-barber"
-                  name="barbeiro"
-                  className="booking-form-control"
-                  value={form.barbeiro}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Selecione um barbeiro</option>
-                  {BARBERS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
+                <div className="booking-form-group">
+                  <label className="booking-form-label" htmlFor="bk-barber">
+                    Barbeiro
+                  </label>
+                  <select
+                    id="bk-barber"
+                    name="barbeiro"
+                    className="booking-form-control"
+                    value={form.barbeiro}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Selecione um barbeiro</option>
+                    {barbeiros.map((item) => (
+                      <option key={getEntityId(item) ?? item.nome} value={item.nome}>
+                        {item.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="booking-form-group">
-                <label className="booking-form-label" htmlFor="bk-date">
-                  Data
-                </label>
-                <input
-                  id="bk-date"
-                  name="data"
-                  type="date"
-                  className="booking-form-control"
-                  value={form.data}
-                  onChange={handleChange}
-                  min={new Date().toISOString().split("T")[0]}
-                  required
-                />
-              </div>
+                <div className="booking-form-group">
+                  <label className="booking-form-label" htmlFor="bk-date">
+                    Data
+                  </label>
+                  <input
+                    id="bk-date"
+                    name="data"
+                    type="date"
+                    className="booking-form-control"
+                    value={form.data}
+                    onChange={handleChange}
+                    min={new Date().toISOString().split("T")[0]}
+                    required
+                  />
+                </div>
 
-              <div className="booking-form-group">
-                <label className="booking-form-label" htmlFor="bk-time">
-                  Horário
-                </label>
-                <select
-                  id="bk-time"
-                  name="horario"
-                  className="booking-form-control"
-                  value={form.horario}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Selecione um horário</option>
-                  {TIMES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
+                <div className="booking-form-group">
+                  <label className="booking-form-label" htmlFor="bk-time">
+                    Horário
+                  </label>
+                  <select
+                    id="bk-time"
+                    name="horario"
+                    className="booking-form-control"
+                    value={form.horario}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Selecione um horário</option>
+                    {TIMES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <button

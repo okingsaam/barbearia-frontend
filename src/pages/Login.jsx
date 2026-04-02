@@ -13,7 +13,7 @@ function Login() {
   const navigate = useNavigate();
 
   if (getAuthToken()) {
-    return <Navigate to="/clientes" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   async function handleLogin(e) {
@@ -23,7 +23,7 @@ function Login() {
 
     try {
       await authenticate({ email, senha });
-      navigate("/clientes");
+      navigate("/dashboard");
     } catch (error) {
       setErro("Email ou senha incorretos.");
       console.error("[Login] Falha na autenticação:", error.message);

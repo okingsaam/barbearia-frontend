@@ -5,6 +5,7 @@ import ApiRequestFeedback from "./components/ApiRequestFeedback";
 import Agendamentos from "./pages/Agendamentos";
 import Barbeiros from "./pages/Barbeiros";
 import Clientes from "./pages/Clientes";
+import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Produtos from "./pages/Produtos";
@@ -27,6 +28,7 @@ function App() {
             </PrivateRoute>
           )}
         >
+          <Route path="/dashboard"    element={<Dashboard />} />
           <Route path="/clientes"     element={<Clientes />} />
           <Route path="/barbeiros"    element={<Barbeiros />} />
           <Route path="/servicos"     element={<Servicos />} />

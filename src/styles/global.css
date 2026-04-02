@@ -411,6 +411,127 @@ p {
   font-size: 0.94rem;
 }
 
+.dashboard-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-intro,
+.dashboard-table-card,
+.dashboard-chart-card {
+  border-color: rgba(212, 175, 55, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.1), transparent 45%),
+    linear-gradient(160deg, #151515 0%, #101010 100%);
+  color: #f2f2f2;
+}
+
+.dashboard-intro .page-subtitle,
+.dashboard-table-card .page-subtitle,
+.dashboard-chart-card .page-subtitle {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 7px;
+}
+
+.metric-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-family: "Cinzel", serif;
+  color: #f8ebc6;
+  font-size: clamp(1.15rem, 2vw, 1.6rem);
+}
+
+.metric-trend {
+  color: #d9ba61;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.dashboard-table-card .table-shell {
+  border-color: rgba(212, 175, 55, 0.2);
+}
+
+.dashboard-table-card .koc-table th {
+  color: #0f0f0f;
+  background: linear-gradient(135deg, #c9a439 0%, #e4c66e 100%);
+  border-bottom-color: rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-table-card .koc-table td {
+  color: #e6e6e6;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-table-card .koc-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  min-width: 102px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.status-badge-confirmado {
+  color: #d2f8dc;
+  border-color: rgba(86, 191, 120, 0.32);
+  background: rgba(86, 191, 120, 0.18);
+}
+
+.status-badge-aguardando {
+  color: #f8e7bc;
+  border-color: rgba(228, 180, 73, 0.4);
+  background: rgba(228, 180, 73, 0.22);
+}
+
+.status-badge-concluido {
+  color: #d1ecff;
+  border-color: rgba(78, 154, 226, 0.38);
+  background: rgba(78, 154, 226, 0.2);
+}
+
+.status-badge-cancelado {
+  color: #ffc9c4;
+  border-color: rgba(224, 97, 86, 0.4);
+  background: rgba(224, 97, 86, 0.22);
+}
+
+.dashboard-chart-wrap {
+  height: 320px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 14px;
+}
+
 .feedback {
   border-radius: 12px;
   padding: 10px 12px;
@@ -801,6 +922,14 @@ p {
     margin-top: 214px;
   }
 
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-chart-wrap {
+    height: 260px;
+  }
+
   .koc-hero,
   .koc-hero-overlay {
     min-height: 620px;
@@ -812,6 +941,17 @@ p {
 
   .koc-table {
     min-width: 620px;
+  }
+}
+
+@media (max-width: 520px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .status-badge {
+    min-width: 84px;
+    font-size: 0.68rem;
   }
 }
 

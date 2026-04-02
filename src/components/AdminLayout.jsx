@@ -4,6 +4,7 @@ import Header from "./Header";
 import { clearAuthToken } from "../services/authService";
 
 const ADMIN_ITEMS = [
+  { to: "/dashboard",    label: "Dashboard" },
   { to: "/clientes",     label: "Clientes" },
   { to: "/barbeiros",    label: "Barbeiros" },
   { to: "/servicos",     label: "Serviços" },

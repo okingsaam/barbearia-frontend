@@ -1568,6 +1568,7 @@ p {
 .pricing-card.featured {
   background: #1c1c1c;
   transform: scale(1.03);
+  padding-top: 58px;
 }
 
 .pricing-card.featured:hover {
@@ -1576,7 +1577,7 @@ p {
 
 .pricing-card-badge {
   position: absolute;
-  top: -13px;
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(135deg, #d4af37, #e8cc6d);
@@ -1587,6 +1588,7 @@ p {
   text-transform: uppercase;
   padding: 5px 16px;
   white-space: nowrap;
+  z-index: 1;
 }
 
 .pricing-card-title {

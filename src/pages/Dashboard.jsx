@@ -9,27 +9,69 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import Table from "../components/Table";
-import { createEntityService, getEntityId } from "../services/api";
+import { api } from "../services/api";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const agendamentosService = createEntityService("/agendamentos");
-const vendasService = createEntityService("/vendas");
-const clientesService = createEntityService("/clientes");
-const barbeirosService = createEntityService("/barbeiros");
-const servicosService = createEntityService("/servicos");
+const defaultDashboardData = {
+  agendamentosHoje: 0,
+  agendamentosOntem: 0,
+  faturamentoHoje: 0,
+  faturamentoOntem: 0,
+  clientesMes: 0,
+  clientesMesAnterior: 0,
+  ticketMedio: 0,
+  faturamento7dias: {},
+  agendamentosDoDia: [],
+};
 
-function asDate(value) {
+function toNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function parseDate(value) {
   if (!value) {
     return null;
   }
 
-  const parsed = new Date(value);
+  const raw = String(value).trim();
+  const directDate = new Date(raw);
+  if (!Number.isNaN(directDate.getTime())) {
+    return directDate;
+  }
+
+  const parts = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!parts) {
+    return null;
+  }
+
+  const day = Number(parts[1]);
+  const month = Number(parts[2]);
+  const year = Number(parts[3]);
+  const parsed = new Date(year, month - 1, day);
+
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function startOfDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+function formatHour(value) {
+  if (!value) {
+    return "-";
+  }
+
+  if (typeof value === "string" && /^\d{2}:\d{2}/.test(value)) {
+    return value.slice(0, 5);
+  }
+
+  const parsed = parseDate(value);
+  if (!parsed) {
+    return "-";
+  }
+
+  return parsed.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function formatCurrency(value) {
@@ -83,46 +125,36 @@ function statusClassName(status) {
   }
 }
 
-function getAppointmentDate(row) {
-  return (
-    row.dataHora ||
-    row.data ||
-    row.horario ||
-    row.createdAt ||
-    row.updatedAt ||
-    null
-  );
+function normalizeAgendaRow(row) {
+  const scheduleValue =
+    row.dataHora || row.horario || row.data || row.inicio || row.createdAt || null;
+
+  return {
+    ...row,
+    horario: formatHour(row.horario || row.hora || scheduleValue),
+    clienteNome: row.clienteNome || row.cliente?.nome || row.cliente || "-",
+    barbeiroNome: row.barbeiroNome || row.barbeiro?.nome || row.barbeiro || "-",
+    servicoNome: row.servicoNome || row.servico?.nome || row.servico || "-",
+    valorServico: toNumber(row.valorServico ?? row.valor ?? row.total),
+    statusLabel: normalizeStatus(row.status || row.situacao),
+  };
 }
 
-function getSaleDate(row) {
-  return row.data || row.dataHora || row.createdAt || row.updatedAt || null;
-}
-
-function getSaleTotal(row) {
-  return Number(row.total ?? row.valor ?? row.precoTotal ?? 0) || 0;
+function normalizeDashboardPayload(payload) {
+  return {
+    ...defaultDashboardData,
+    ...payload,
+    faturamento7dias: payload?.faturamento7dias || {},
+    agendamentosDoDia: Array.isArray(payload?.agendamentosDoDia)
+      ? payload.agendamentosDoDia
+      : [],
+  };
 }
 
 function Dashboard() {
-  const [rows, setRows] = useState([]);
-  const [vendas, setVendas] = useState([]);
-  const [clientes, setClientes] = useState([]);
-  const [barbeiros, setBarbeiros] = useState([]);
-  const [servicos, setServicos] = useState([]);
+  const [dashboardData, setDashboardData] = useState(defaultDashboardData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const clientNameMap = useMemo(
-    () => new Map(clientes.map((item) => [String(getEntityId(item)), item.nome])),
-    [clientes],
-  );
-  const barberNameMap = useMemo(
-    () => new Map(barbeiros.map((item) => [String(getEntityId(item)), item.nome])),
-    [barbeiros],
-  );
-  const serviceMap = useMemo(
-    () => new Map(servicos.map((item) => [String(getEntityId(item)), item])),
-    [servicos],
-  );
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -130,19 +162,8 @@ function Dashboard() {
         setLoading(true);
         setError("");
 
-        const [agendamentos, vendasData, clientesData, barbeirosData, servicosData] = await Promise.all([
-          agendamentosService.list(),
-          vendasService.list(),
-          clientesService.list(),
-          barbeirosService.list(),
-          servicosService.list(),
-        ]);
-
-        setRows(agendamentos);
-        setVendas(vendasData);
-        setClientes(clientesData);
-        setBarbeiros(barbeirosData);
-        setServicos(servicosData);
+        const response = await api.get("/dashboard");
+        setDashboardData(normalizeDashboardPayload(response.data));
       } catch (loadError) {
         setError(loadError.message || "Nao foi possivel carregar o dashboard.");
       } finally {
@@ -153,103 +174,35 @@ function Dashboard() {
     loadDashboardData();
   }, []);
 
-  const todayData = useMemo(() => {
-    const now = new Date();
-    const todayStart = startOfDay(now);
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setDate(todayStart.getDate() + 1);
-
-    const appointmentsToday = rows.filter((row) => {
-      const rowDate = asDate(getAppointmentDate(row));
-      return rowDate && rowDate >= todayStart && rowDate < tomorrowStart;
-    });
-
-    const salesToday = vendas.filter((row) => {
-      const rowDate = asDate(getSaleDate(row));
-      return rowDate && rowDate >= todayStart && rowDate < tomorrowStart;
-    });
-
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(todayStart.getDate() - 1);
-
-    const appointmentsYesterday = rows.filter((row) => {
-      const rowDate = asDate(getAppointmentDate(row));
-      return rowDate && rowDate >= yesterdayStart && rowDate < todayStart;
-    });
-
-    const salesYesterday = vendas.filter((row) => {
-      const rowDate = asDate(getSaleDate(row));
-      return rowDate && rowDate >= yesterdayStart && rowDate < todayStart;
-    });
-
-    const todayRevenue = salesToday.reduce((sum, sale) => sum + getSaleTotal(sale), 0);
-    const yesterdayRevenue = salesYesterday.reduce((sum, sale) => sum + getSaleTotal(sale), 0);
-
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const servedThisMonth = new Set(
-      rows
-        .filter((row) => {
-          const rowDate = asDate(getAppointmentDate(row));
-          return rowDate && rowDate >= monthStart;
-        })
-        .map((row) => String(row.clienteId ?? row.cliente?.id ?? row.cliente))
-        .filter(Boolean),
-    ).size;
-
-    const servedPreviousMonth = new Set(
-      rows
-        .filter((row) => {
-          const rowDate = asDate(getAppointmentDate(row));
-          return rowDate && rowDate >= previousMonthStart && rowDate < previousMonthEnd;
-        })
-        .map((row) => String(row.clienteId ?? row.cliente?.id ?? row.cliente))
-        .filter(Boolean),
-    ).size;
-
-    const ticketToday = salesToday.length > 0 ? todayRevenue / salesToday.length : 0;
-    const ticketYesterday = salesYesterday.length > 0 ? yesterdayRevenue / salesYesterday.length : 0;
+  const summary = useMemo(() => {
+    const agendamentosHoje = toNumber(dashboardData.agendamentosHoje);
+    const faturamentoHoje = toNumber(dashboardData.faturamentoHoje);
+    const clientesMes = toNumber(dashboardData.clientesMes);
+    const ticketMedio = toNumber(dashboardData.ticketMedio);
 
     return {
-      appointmentsToday,
-      todayRevenue,
-      servedThisMonth,
-      ticketToday,
-      variationAppointments: computeVariation(appointmentsToday.length, appointmentsYesterday.length),
-      variationRevenue: computeVariation(todayRevenue, yesterdayRevenue),
-      variationServed: computeVariation(servedThisMonth, servedPreviousMonth),
-      variationTicket: computeVariation(ticketToday, ticketYesterday),
+      agendamentosHoje,
+      faturamentoHoje,
+      clientesMes,
+      ticketMedio,
+      variationAppointments: computeVariation(
+        agendamentosHoje,
+        toNumber(dashboardData.agendamentosOntem),
+      ),
+      variationRevenue: computeVariation(
+        faturamentoHoje,
+        toNumber(dashboardData.faturamentoOntem),
+      ),
+      variationClientesMes: computeVariation(
+        clientesMes,
+        toNumber(dashboardData.clientesMesAnterior),
+      ),
     };
-  }, [rows, vendas]);
+  }, [dashboardData]);
 
   const agendaRows = useMemo(
-    () =>
-      [...todayData.appointmentsToday]
-        .sort((a, b) => {
-          const dateA = asDate(getAppointmentDate(a));
-          const dateB = asDate(getAppointmentDate(b));
-          return (dateA?.getTime() || 0) - (dateB?.getTime() || 0);
-        })
-        .map((row) => {
-          const rowDate = asDate(getAppointmentDate(row));
-          const clienteKey = String(row.clienteId ?? row.cliente?.id ?? row.cliente);
-          const barbeiroKey = String(row.barbeiroId ?? row.barbeiro?.id ?? row.barbeiro);
-          const servicoKey = String(row.servicoId ?? row.servico?.id ?? row.servico);
-          const service = serviceMap.get(servicoKey);
-
-          return {
-            ...row,
-            horario: rowDate ? rowDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "-",
-            clienteNome: row.cliente?.nome ?? clientNameMap.get(clienteKey) ?? "-",
-            barbeiroNome: row.barbeiro?.nome ?? barberNameMap.get(barbeiroKey) ?? "-",
-            servicoNome: row.servico?.nome ?? service?.nome ?? "-",
-            valorServico: Number(row.valor ?? row.total ?? service?.preco ?? 0) || 0,
-            statusLabel: normalizeStatus(row.status),
-          };
-        }),
-    [todayData.appointmentsToday, clientNameMap, barberNameMap, serviceMap],
+    () => dashboardData.agendamentosDoDia.map(normalizeAgendaRow),
+    [dashboardData.agendamentosDoDia],
   );
 
   const agendaColumns = useMemo(
@@ -275,32 +228,38 @@ function Dashboard() {
   );
 
   const chartModel = useMemo(() => {
-    const labels = [];
-    const values = [];
-    const today = startOfDay(new Date());
+    const rawSeries = dashboardData.faturamento7dias;
 
-    for (let index = 6; index >= 0; index -= 1) {
-      const day = new Date(today);
-      day.setDate(today.getDate() - index);
+    const entries = Array.isArray(rawSeries)
+      ? rawSeries.map((item, index) => [item?.data || item?.dia || String(index), item?.valor || item?.faturamento || 0])
+      : Object.entries(rawSeries || {});
 
-      const nextDay = new Date(day);
-      nextDay.setDate(day.getDate() + 1);
+    const normalizedEntries = entries
+      .map(([key, value]) => ({
+        key,
+        value: toNumber(value),
+        parsedDate: parseDate(key),
+      }))
+      .sort((a, b) => {
+        if (!a.parsedDate || !b.parsedDate) {
+          return String(a.key).localeCompare(String(b.key));
+        }
 
-      const dayTotal = vendas
-        .filter((sale) => {
-          const saleDate = asDate(getSaleDate(sale));
-          return saleDate && saleDate >= day && saleDate < nextDay;
-        })
-        .reduce((sum, sale) => sum + getSaleTotal(sale), 0);
+        return a.parsedDate.getTime() - b.parsedDate.getTime();
+      });
 
-      labels.push(
-        day.toLocaleDateString("pt-BR", {
-          weekday: "short",
-          day: "2-digit",
-        }),
-      );
-      values.push(Number(dayTotal.toFixed(2)));
-    }
+    const labels = normalizedEntries.map((entry) => {
+      if (!entry.parsedDate) {
+        return String(entry.key);
+      }
+
+      return entry.parsedDate.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+      });
+    });
+
+    const values = normalizedEntries.map((entry) => Number(entry.value.toFixed(2)));
 
     return {
       data: {
@@ -371,26 +330,26 @@ function Dashboard() {
         <div className="metrics-grid">
           <article className="metric-card">
             <p className="metric-label">Agendamentos Hoje</p>
-            <strong className="metric-value">{todayData.appointmentsToday.length}</strong>
-            <span className="metric-trend">{formatPct(todayData.variationAppointments)} vs ontem</span>
+            <strong className="metric-value">{summary.agendamentosHoje}</strong>
+            <span className="metric-trend">{formatPct(summary.variationAppointments)} vs ontem</span>
           </article>
 
           <article className="metric-card">
             <p className="metric-label">Faturamento do Dia</p>
-            <strong className="metric-value">{formatCurrency(todayData.todayRevenue)}</strong>
-            <span className="metric-trend">{formatPct(todayData.variationRevenue)} vs ontem</span>
+            <strong className="metric-value">{formatCurrency(summary.faturamentoHoje)}</strong>
+            <span className="metric-trend">{formatPct(summary.variationRevenue)} vs ontem</span>
           </article>
 
           <article className="metric-card">
             <p className="metric-label">Clientes no Mes</p>
-            <strong className="metric-value">{todayData.servedThisMonth}</strong>
-            <span className="metric-trend">{formatPct(todayData.variationServed)} vs mes anterior</span>
+            <strong className="metric-value">{summary.clientesMes}</strong>
+            <span className="metric-trend">{formatPct(summary.variationClientesMes)} vs mes anterior</span>
           </article>
 
           <article className="metric-card">
             <p className="metric-label">Ticket Medio</p>
-            <strong className="metric-value">{formatCurrency(todayData.ticketToday)}</strong>
-            <span className="metric-trend">{formatPct(todayData.variationTicket)} vs ontem</span>
+            <strong className="metric-value">{formatCurrency(summary.ticketMedio)}</strong>
+            <span className="metric-trend">Baseado no dia atual</span>
           </article>
         </div>
       </header>

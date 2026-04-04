@@ -135,7 +135,9 @@ function normalizeAgendaRow(row) {
     clienteNome: row.clienteNome || row.cliente?.nome || row.cliente || "-",
     barbeiroNome: row.barbeiroNome || row.barbeiro?.nome || row.barbeiro || "-",
     servicoNome: row.servicoNome || row.servico?.nome || row.servico || "-",
-    valorServico: toNumber(row.valorServico ?? row.valor ?? row.total),
+    valorServico: toNumber(
+      row.servico?.preco ?? row.valorServico ?? row.valor ?? row.total,
+    ),
     statusLabel: normalizeStatus(row.status || row.situacao),
   };
 }

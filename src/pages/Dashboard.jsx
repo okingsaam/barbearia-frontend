@@ -315,7 +315,7 @@ function Dashboard() {
         },
       },
     };
-  }, [vendas]);
+  }, [dashboardData.faturamento7dias]);
 
   return (
     <section className="dashboard-shell">
